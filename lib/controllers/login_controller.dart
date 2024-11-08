@@ -6,7 +6,7 @@ class LoginController {
   final ApiService _apiService = ApiService();
 
   Future<LoginResponseModel?> loginUser(String phoneNumber, String password) async {
-    const String endpoint = 'login';
+    const String endpoint = 'accounts/api/login/';
 
     try {
       final response = await _apiService.post(endpoint, {

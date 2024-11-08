@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  final String baseUrl = 'https://yourapi.com';
+  final String baseUrl = 'https://smssender2.liara.run/';
 
   Future<http.Response> get(String endpoint) async {
     final url = '$baseUrl/$endpoint';

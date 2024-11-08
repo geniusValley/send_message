@@ -7,7 +7,7 @@ class HomeController {
   final ApiService _apiService = ApiService();
 
   Future<List<GroupModel>> fetchGroups() async {
-    const String endpoint = 'groups';
+    const String endpoint = 'contacts/api/group_list/';
 
     try {
       final response = await _apiService.get(endpoint);
@@ -31,7 +31,7 @@ class HomeController {
     required String gender,
     required int groupId,
   }) async {
-    const String endpoint = 'contacts';
+    const String endpoint = 'contacts/api/create_contacts/';
 
     try {
       final response = await _apiService.post(endpoint, {
