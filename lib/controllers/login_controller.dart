@@ -15,8 +15,11 @@ class LoginController {
       });
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body)['data'];
-        return LoginResponseModel.fromJson(data);
+        final jsonResponse = json.decode(response.body);
+        final loginResponse = LoginResponseModel.fromJson(jsonResponse['data']);
+        _apiService.setAuthToken(loginResponse.authorizationToken); // تنظیم توکن
+        print('Login successful: ${loginResponse.firstName}');
+        return loginResponse;
       } else {
         throw Exception('Login failed: ${response.body}');
       }
