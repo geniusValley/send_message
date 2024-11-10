@@ -36,21 +36,30 @@ class LoginPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Phone Number'),
-              keyboardType: TextInputType.number, // تنظیم کیبورد فقط برای اعداد
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly, // فقط اعداد مجاز است
-                LengthLimitingTextInputFormatter(11), // محدودیت به 11 رقم
-              ],
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: TextField(
+                controller: _phoneController,textDirection: TextDirection.rtl,textAlign: TextAlign.right,
+                decoration: const InputDecoration(labelText: 'شماره موبایل'),
+                keyboardType: TextInputType.number, // تنظیم کیبورد فقط برای اعداد
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly, // فقط اعداد مجاز است
+                  LengthLimitingTextInputFormatter(11), // محدودیت به 11 رقم
+                ],
+              ),
             ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              keyboardType: TextInputType.text, // کیبورد کامل
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: TextField(
+                controller: _passwordController,textDirection: TextDirection.rtl,textAlign: TextAlign.right,
+                decoration: const InputDecoration(labelText: 'پسورد'),
+                keyboardType: TextInputType.text, // کیبورد کامل
+              ),
             ),
-            ElevatedButton(onPressed: () => _login(context), child: const Text('Login')),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton(onPressed: () => _login(context), child: const Text('ورود')),
+            ),
           ],
         ),
       ),

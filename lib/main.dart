@@ -11,14 +11,17 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MyApp',
-      initialRoute: '/splash',
-      routes: {
-        '/splash': (context) => const SplashPage(),
-        '/login': (context) =>  LoginPage(),
-        '/home': (context) =>  HomePage(),
-      },
+    return SafeArea(
+      child: MaterialApp(
+        title: 'MyApp',
+        initialRoute: '/splash',
+        debugShowCheckedModeBanner: false,
+        routes: {
+          '/splash': (context) => const SplashPage(),
+          '/login': (context) =>  LoginPage(),
+          '/home': (context) =>  HomePage(),
+        },
+      ),
     );
   }
 }

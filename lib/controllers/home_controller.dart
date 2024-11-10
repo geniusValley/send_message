@@ -6,6 +6,11 @@ import '../services/api_service.dart';
 class HomeController {
   final ApiService _apiService = ApiService();
 
+  // متد برای تنظیم توکن
+  Future<void> setAuthToken(String token) async {
+    _apiService.setAuthToken(token);
+  }
+
   Future<List<GroupModel>> fetchGroups() async {
     const String endpoint = 'contacts/api/group_list/';
 
@@ -44,13 +49,14 @@ class HomeController {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'];
-        return ContactModel.fromJson(data);
+        return ContactModel.fromJson(data); // کاربر با موفقیت اضافه شده است
       } else {
         throw Exception('Failed to add contact: ${response.body}');
       }
     } catch (e) {
       print('Error in addContact: $e');
-      return null;
+      return null; // اگر خطا باشد، null برمی‌گرداند
     }
   }
+
 }

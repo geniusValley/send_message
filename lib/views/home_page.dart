@@ -1,25 +1,225 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/home_controller.dart';
 import '../models/group_model.dart';
 
-class HomePage extends StatelessWidget {
-  final HomeController _controller = HomeController();
-
+class HomePage extends StatefulWidget {
   HomePage({super.key});
 
-  void _fetchGroups() async {
-    final groups = await _controller.fetchGroups();
-    print('Fetched groups: $groups');
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final HomeController _controller = HomeController();
+  String? selectedGroup;
+  String? selectedGender;
+  List<GroupModel> groups = [];
+
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+
+  late Future<List<GroupModel>> _groupsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // _groupsFuture = _fetchGroups();
+    _initializeTokenAndFetchGroups();
+
+  }
+  Future<void> _initializeTokenAndFetchGroups() async {
+    // ابتدا توکن را تنظیم می‌کنیم
+    final prefs = await SharedPreferences.getInstance();
+   final authToken = prefs.getString('auth_token');
+    await _controller.setAuthToken(authToken??""); // توکن خود را قرار دهید
+
+    // بعد از تنظیم توکن، fetchGroups را فراخوانی می‌کنیم
+    setState(() {
+      _groupsFuture = _fetchGroups();
+    });
+  }
+  Future<List<GroupModel>> _fetchGroups() async {
+    try {
+      final fetchedGroups = await _controller.fetchGroups();
+      setState(() {
+        groups = fetchedGroups;
+      });
+      print("Groups fetched successfully: $fetchedGroups"); // چاپ داده‌های دریافتی
+      return fetchedGroups;
+    } catch (e) {
+      print("Error fetching groups: $e");
+      return [];
+    }
+  }
+
+  void _submitForm() async {
+    // بررسی اینکه همه فیلدها پر شده باشند
+    if (nameController.text.isNotEmpty &&
+        lastNameController.text.isNotEmpty &&
+        phoneController.text.isNotEmpty &&
+        selectedGroup != null &&
+        selectedGender != null) {
+
+      // پیدا کردن ID گروه از لیست گروه‌ها
+      final selectedGroupId = groups.firstWhere((group) => group.name == selectedGroup).id;
+
+      // ارسال داده‌ها به API
+      final contact = await _controller.addContact(
+        firstName: nameController.text,
+        lastName: lastNameController.text,
+        phoneNumber: phoneController.text,
+        gender: selectedGender!,
+        groupId: selectedGroupId,
+      );
+
+      if (contact != null) {
+        // اگر پاسخ موفق بود، پیام موفقیت نمایش داده شود
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("موفق"),
+            content: const Text("کاربر با موفقیت اضافه شد."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("باشه"),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // در صورتی که مشکلی پیش آمد
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("خطا"),
+            content: const Text("مشکلی در اضافه کردن کاربر پیش آمد."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("باشه"),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      // اگر فیلدها کامل نبودند، پیغام خطا نمایش داده شود
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("خطا"),
+          content: const Text("لطفا همه فیلدها را پر کنید."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("باشه"),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          children: [
-            ElevatedButton(onPressed: _fetchGroups, child: Text('Fetch Groups')),
-          ],
+      appBar: AppBar(
+        title: const Text("Home Page"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FutureBuilder<List<GroupModel>>(
+          future: _groupsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text("No groups available"));
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: "انتخاب گروه",
+                    border: OutlineInputBorder(),
+                  ),
+                  value: selectedGroup,
+                  items: snapshot.data!.map((group) {
+                    return DropdownMenuItem(
+                      value: group.name,
+                      child: Text(group.name),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedGroup = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: "نام",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: lastNameController,
+                  decoration: const InputDecoration(
+                    labelText: "نام خانوادگی",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: "شماره موبایل",
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: "جنسیت",
+                    border: OutlineInputBorder(),
+                  ),
+                  value: selectedGender,
+                  items: const [
+                    DropdownMenuItem(value: "مرد", child: Text("مرد")),
+                    DropdownMenuItem(value: "زن", child: Text("زن")),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedGender = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _submitForm,
+                  child: const Text("ثبت و ارسال پیامک"),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
