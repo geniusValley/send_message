@@ -44,7 +44,7 @@ class SplashPageState extends State<SplashPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(connectionStatus ? 'welcome' : 'check internet'),
+          content: Text(connectionStatus ? 'خوش امدید' : 'اینترنت را بررسی کنید!'),
         ),
       );
     }
@@ -72,7 +72,7 @@ class SplashPageState extends State<SplashPage> {
               else if (!isInternetAvailable!) ...{
                 ElevatedButton(
                   onPressed: checkConnection,
-                  child: const Text('try again!'),
+                  child: const Text('مجددا تلاش کنید!'),
                 )
               },
             ],

@@ -23,7 +23,7 @@ class LoginPage extends StatelessWidget {
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed!')),
+          const SnackBar(content: Text('ورود با شکست مواجه شد!')),
         );
       }
     }
