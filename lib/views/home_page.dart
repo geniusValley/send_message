@@ -1,8 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/home_controller.dart';
 import '../models/group_model.dart';
+import 'package:telephony/telephony.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({super.key});
@@ -22,6 +23,24 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController phoneController = TextEditingController();
 
   late Future<List<GroupModel>> _groupsFuture;
+
+  final Telephony telephony = Telephony.instance;
+
+  // متنی که می‌خواهیم ارسال کنیم
+  String message = "سلام! به هیئت خیمة الشهدا خوش آمدید.\r\nاین مجموعه با محوریت مسجد و پایگاه موسی بن جعفر (ع) میزبان شماست.\r\n\r\nبرای عضویت در صفحات مجازی ما، از طریق لینک‌های زیر اقدام نمایید:\r\nروبیکا:\r";
+
+  // تابع ارسال پیامک
+  void _sendSMS(String message, String phoneNumber) async {
+    bool? permissionsGranted = await telephony.requestSmsPermissions;
+    if (permissionsGranted ?? false) {
+      telephony.sendSms(
+        to: phoneNumber,
+        message: message,isMultipart: true,
+      );
+    } else {
+      print("Permissions not granted");
+    }
+  }
 
   @override
   void initState() {
@@ -64,7 +83,7 @@ class _HomePageState extends State<HomePage> {
         selectedGender != null) {
 
       // پیدا کردن ID گروه از لیست گروه‌ها
-      final selectedGroupId = groups.firstWhere((group) => group.name == selectedGroup).id;
+      final selectedGroupId = groups.firstWhere((group) => group.name == selectedGroup).id.toString();
 
       // ارسال داده‌ها به API
       final contact = await _controller.addContact(
@@ -73,25 +92,43 @@ class _HomePageState extends State<HomePage> {
         phoneNumber: phoneController.text,
         gender: selectedGender!,
         groupId: selectedGroupId,
+
       );
 
       if (contact != null) {
         // اگر پاسخ موفق بود، پیام موفقیت نمایش داده شود
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("موفق"),
-            content: const Text("کاربر با موفقیت اضافه شد."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("باشه"),
+        if(mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text("موفق"),
+              content: const Text("کاربر با موفقیت اضافه شد."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("باشه"),
+                ),
+              ],
+            ),
+          );
+        }
+
+        String phoneNumber = phoneController.text.trim();
+        if (phoneNumber.length == 11 && contact.lastMessage != null && contact.lastMessage!.isNotEmpty) {
+          _sendSMS(contact.lastMessage!, phoneNumber);
+        } else {
+          // در صورت اشتباه وارد کردن شماره موبایل
+          if(mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("لطفا یک شماره موبایل معتبر وارد کنید."),
               ),
-            ],
-          ),
-        );
+            );
+          }
+
+        }
       } else {
         // در صورتی که مشکلی پیش آمد
         showDialog(
@@ -194,6 +231,10 @@ class _HomePageState extends State<HomePage> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly, // فقط اعداد
+                    LengthLimitingTextInputFormatter(11), // حداکثر تعداد کاراکتر 11
+                  ],
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(

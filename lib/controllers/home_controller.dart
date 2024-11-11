@@ -18,10 +18,10 @@ class HomeController {
       final response = await _apiService.get(endpoint);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body)['data'];
+        final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes))['data'];
         return data.map((group) => GroupModel.fromJson(group)).toList();
       } else {
-        throw Exception('Failed to fetch groups: ${response.body}');
+        throw Exception('Failed to fetch groups: ${utf8.decode(response.bodyBytes)}');
       }
     } catch (e) {
       print('Error in fetchGroups: $e');
@@ -34,7 +34,7 @@ class HomeController {
     required String lastName,
     required String phoneNumber,
     required String gender,
-    required int groupId,
+    required String groupId,
   }) async {
     const String endpoint = 'contacts/api/create_contacts/';
 
@@ -44,14 +44,15 @@ class HomeController {
         'last_name': lastName,
         'phone_number': phoneNumber,
         'gender': gender,
-        'groups': groupId,
+        'group_id': groupId,
       });
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body)['data'];
+
+        final data =  json.decode(utf8.decode(response.bodyBytes))['data'];
         return ContactModel.fromJson(data); // کاربر با موفقیت اضافه شده است
       } else {
-        throw Exception('Failed to add contact: ${response.body}');
+        throw Exception('Failed to add contact: ${utf8.decode(response.bodyBytes)}');
       }
     } catch (e) {
       print('Error in addContact: $e');

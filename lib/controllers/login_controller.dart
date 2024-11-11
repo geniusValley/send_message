@@ -15,13 +15,13 @@ class LoginController {
       });
 
       if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body);
+        final jsonResponse = json.decode(utf8.decode(response.bodyBytes));
         final loginResponse = LoginResponseModel.fromJson(jsonResponse['data']);
         _apiService.setAuthToken(loginResponse.authorizationToken); // تنظیم توکن
         print('Login successful: ${loginResponse.firstName}');
         return loginResponse;
       } else {
-        throw Exception('Login failed: ${response.body}');
+        throw Exception('Login failed: ${utf8.decode(response.bodyBytes)}');
       }
     } catch (e) {
       print('Error in loginUser: $e');

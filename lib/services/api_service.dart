@@ -42,6 +42,7 @@ class ApiService {
   // متد POST با افزودن هدر Authorization
   Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
     final url = '$baseUrl$endpoint';
+    print('json.encode(body): ${json.encode(body)}');
     try {
       return await http.post(
         Uri.parse(url),
