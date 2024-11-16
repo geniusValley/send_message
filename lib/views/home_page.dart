@@ -89,11 +89,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _submitForm() async {
-    if (nameController.text.isNotEmpty &&
-        lastNameController.text.isNotEmpty &&
-        phoneController.text.isNotEmpty &&
-        selectedGroup != null &&
-        selectedGender != null) {
+    if (_formKey.currentState?.validate() ?? false){
 
       final selectedGroupId = groups.firstWhere((group) => group.name == selectedGroup).id.toString();
 
@@ -127,7 +123,7 @@ class _HomePageState extends State<HomePage> {
 
         String phoneNumber = phoneController.text.trim();
         if (phoneNumber.length == 11 && contact.lastMessage != null && contact.lastMessage!.isNotEmpty) {
-          _sendSMS("سلام عزیزم", phoneNumber);
+          _sendSMS(contact.lastMessage!, phoneNumber);
         } else {
           if(mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -174,107 +170,161 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
+  // Validator functions for each field
+  String? _validateRequired(String? value, String fieldName) {
+    if (value == null || value.isEmpty) {
+      return "$fieldName را وارد کنید";
+    }
+    return null;
+  }
+
+  String? _validatePhoneNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return "شماره موبایل را وارد کنید";
+    } else if (value.length != 11) {
+      return "شماره موبایل باید ۱۱ رقمی باشد";
+    }
+    return null;
+  }
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("افزودن مخاطب"),
-      ),
-      body: FutureBuilder<List<GroupModel>>(
-        future: _groupsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No groups available"));
-          }
-
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: "انتخاب گروه",
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedGroup,
-                    items: snapshot.data!.map((group) {
-                      return DropdownMenuItem(
-                        value: group.name,
-                        child: Text(group.name),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedGroup = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: "نام",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: lastNameController,
-                    decoration: const InputDecoration(
-                      labelText: "نام خانوادگی",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: phoneController,
-                    decoration: const InputDecoration(
-                      labelText: "شماره موبایل",
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly, // فقط اعداد
-                      LengthLimitingTextInputFormatter(11), // حداکثر تعداد کاراکتر 11
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: "جنسیت",
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedGender,
-                    items: const [
-                      DropdownMenuItem(value: "مرد", child: Text("مرد")),
-                      DropdownMenuItem(value: "زن", child: Text("زن")),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedGender = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _submitForm,
-                    child: const Text("ثبت و ارسال پیامک"),
-                  ),
-
-
-
-                ],
-              ),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: Scaffold(
+          appBar: AppBar(title: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0,vertical: 20),
+            child: const Text("افزودن مخاطب"),
+          ),actions: [ Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            child: Image.asset(
+              "lib/assets/small_logo.png",
+              height: 100,
+              width: 100,
             ),
-          );
-        },
+          ),],),
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: FutureBuilder<List<GroupModel>>(
+              future: _groupsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text("خطا در دریافت گروه‌ها: ${snapshot.error}"));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text("هیچ گروهی موجود نیست"));
+                }
+
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(
+                              labelText: "انتخاب گروه",
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white70,
+                            ),
+                            value: selectedGroup,
+                            items: snapshot.data!.map((group) {
+                              return DropdownMenuItem(
+                                value: group.name,
+                                child: Text(group.name),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                selectedGroup = value;
+                              });
+                            },
+                            validator: (value) => _validateRequired(value, "گروه"),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: "نام",
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white70,
+                            ),
+                            textDirection: TextDirection.rtl,
+                            validator: (value) => _validateRequired(value, "نام"),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: lastNameController,
+                            decoration: const InputDecoration(
+                              labelText: "نام خانوادگی",
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white70,
+                            ),
+                            textDirection: TextDirection.rtl,
+                            validator: (value) => _validateRequired(value, "نام خانوادگی"),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: phoneController,
+                            decoration: const InputDecoration(
+                              labelText: "شماره موبایل",
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white70,
+                            ),
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(11),
+                            ],
+                            textDirection: TextDirection.rtl,
+                            validator: _validatePhoneNumber,
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(
+                              labelText: "جنسیت",
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white70,
+                            ),
+                            value: selectedGender,
+                            items: const [
+                              DropdownMenuItem(value: "مرد", child: Text("مرد")),
+                              DropdownMenuItem(value: "زن", child: Text("زن")),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                selectedGender = value;
+                              });
+                            },
+                            validator: (value) => _validateRequired(value, "جنسیت"),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: _submitForm,
+                            child: const Text("ثبت و ارسال پیامک",style: TextStyle(fontSize: 16),),
+                            style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Color(0xff30471f)),foregroundColor: WidgetStateProperty.all(Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
