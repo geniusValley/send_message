@@ -4,18 +4,19 @@ import 'package:flutter/services.dart';
 import '../controllers/login_controller.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  LoginPageState createState() => LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class LoginPageState extends State<LoginPage> {
   final LoginController _controller = LoginController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
+  final _phoneFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool isLoading = false;
 
   Future<void> _login(BuildContext context) async {
@@ -74,115 +75,117 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _phoneFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 0;
+    final mediaQueryWidth = MediaQuery.of(context).size.width;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        // appBar: AppBar(
-        //   title: Padding(
-        //     padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 50),
-        //     child: const Text("احراز هویت"),
-        //   ),
-        //   actions: [
-        //     Padding(
-        //       padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20),
-        //       child: Image.asset(
-        //         "lib/assets/small_logo.png",
-        //         height: 80,
-        //         width: 80,
-        //       ),
-        //     ),
-        //   ],
-        //   // bottom: PreferredSize(
-        //   //     preferredSize: Size.fromHeight(100.0),
-        //   //     child: Padding(
-        //   //       padding: const EdgeInsets.all(8.0),
-        //   //       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        //   //         Text("احراز هویت"),
-        //   //         Image.asset(
-        //   //           "lib/assets/small_logo.png",
-        //   //           height: 70,
-        //   //           width: 70,
-        //   //         ),
-        //   //       ]),
-        //   //     )),
-        // ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Form(
             key: _formKey,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("احراز هویت",style: TextStyle(fontSize: 20)),
-                      Image.asset(
-                        "lib/assets/small_logo.png",
-                        height: 80,
-                        width: 80,
-                      ),
-                    ],
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: isKeyboardOpen ? mediaQueryWidth * 0.05 : mediaQueryWidth * 0.1),
+                  Padding(
+                    padding: EdgeInsets.all(mediaQueryWidth * 0.1),
+                    child: Image.asset(
+                      "assets/large_logo.png",
+                      height: isKeyboardOpen ? mediaQueryWidth * 0.35 : mediaQueryWidth * 0.45,
+                      width: isKeyboardOpen ? mediaQueryWidth * 0.35 : mediaQueryWidth * 0.45,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: TextFormField(
-                    controller: _phoneController,
+                  const SizedBox(height: 16),
+                  Directionality(
                     textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: _buildInputDecoration('شماره موبایل'),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(11),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'شماره موبایل الزامی است';
-                      } else if (value.length != 11) {
-                        return 'شماره موبایل باید ۱۱ رقم باشد';
-                      }
-                      return null;
-                    },
+                    child: TextFormField(
+                      focusNode: _phoneFocusNode,
+                      textInputAction: TextInputAction.next,
+                      controller: _phoneController,
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      decoration: _buildInputDecoration('شماره موبایل'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(11),
+                      ],
+                      onFieldSubmitted: (value) {
+                        // انتقال فوکوس به فیلد دوم
+                        FocusScope.of(context).requestFocus(_passwordFocusNode);
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'شماره موبایل الزامی است';
+                        } else if (value.length != 11) {
+                          return 'شماره موبایل باید ۱۱ رقم باشد';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: TextFormField(
-                    controller: _passwordController,
+                  const SizedBox(height: 16),
+                  Directionality(
                     textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    decoration: _buildInputDecoration('پسورد'),
-                    keyboardType: TextInputType.text,
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'وارد کردن پسورد الزامی است';
-                      }
-                      return null;
-                    },
+                    child: TextFormField(
+                      focusNode: _passwordFocusNode,
+                      textInputAction: TextInputAction.done,
+                      controller: _passwordController,
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      decoration: _buildInputDecoration('پسورد'),
+                      keyboardType: TextInputType.text,
+                      obscureText: true,
+                      onFieldSubmitted: (value) {
+                        // اجرای لاگین هنگام کلیک روی دکمه Done
+                        if (_formKey.currentState!.validate()) {
+                          _login(context);
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'وارد کردن پسورد الزامی است';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: isLoading ? null : () => _login(context),
-                  style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  SizedBox(height: isKeyboardOpen ? mediaQueryWidth * 0.08 : mediaQueryWidth * 0.45),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : () => _login(context),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xff30471f),
+                        ),
+                        child: isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('ورود', style: TextStyle(fontSize: 18)),
                       ),
-                      foregroundColor: Colors.white,
-                      backgroundColor: Color(0xff30471f)),
-                  child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('ورود', style: TextStyle(fontSize: 18)),
-                ),
-              ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

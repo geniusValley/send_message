@@ -6,7 +6,7 @@ import '../models/group_model.dart';
 import 'package:telephony/telephony.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({super.key});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -37,13 +37,15 @@ class _HomePageState extends State<HomePage> {
     if (permissionsGranted ?? false) {
       telephony.sendSms(
         to: phoneNumber,
-        message: message,isMultipart: true,
+        message: message,
+        isMultipart: true,
       );
       sendSms(message, phoneNumber, 1);
     } else {
       print("Permissions not granted");
     }
   }
+
   Future<void> sendSms(String message, String phoneNumber, int simSlot) async {
     try {
       final result = await platform.invokeMethod('sendSms', {
@@ -56,29 +58,35 @@ class _HomePageState extends State<HomePage> {
       print("Failed to send SMS: ${e.message}");
     }
   }
+
   @override
   void initState() {
     super.initState();
     // _groupsFuture = _fetchGroups();
     _initializeTokenAndFetchGroups();
-
   }
+
   Future<void> _initializeTokenAndFetchGroups() async {
     // ابتدا توکن را تنظیم می‌کنیم
     final prefs = await SharedPreferences.getInstance();
-   final authToken = prefs.getString('auth_token');
-    await _controller.setAuthToken(authToken??""); // توکن خود را قرار دهید
+    final authToken = prefs.getString('auth_token');
+    await _controller.setAuthToken(authToken ?? ""); // توکن خود را قرار دهید
 
     // بعد از تنظیم توکن، fetchGroups را فراخوانی می‌کنیم
     setState(() {
       _groupsFuture = _fetchGroups();
     });
   }
+
   Future<List<GroupModel>> _fetchGroups() async {
     try {
       final fetchedGroups = await _controller.fetchGroups();
       setState(() {
         groups = fetchedGroups;
+        // اگر لیست فقط یک گروه داشت، مقدار پیش‌فرض را تنظیم کن
+        if (groups.length == 1) {
+          selectedGroup = groups.first.name;
+        }
       });
       print("Groups fetched successfully: $fetchedGroups"); // چاپ داده‌های دریافتی
       return fetchedGroups;
@@ -89,26 +97,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _submitForm() async {
-    if (_formKey.currentState?.validate() ?? false){
-
+    if (_formKey.currentState?.validate() ?? false) {
       final selectedGroupId = groups.firstWhere((group) => group.name == selectedGroup).id.toString();
 
-      final contact = await _controller.addContact(
+      final response = await _controller.addContact(
         firstName: nameController.text,
         lastName: lastNameController.text,
         phoneNumber: phoneController.text,
         gender: selectedGender!,
         groupId: selectedGroupId,
-
       );
 
-      if (contact != null) {
-        if(mounted) {
+      if (response != null) {
+        final contact = response.contact;
+        final message = response.message;
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                title: const Text("موفق"),
+                content: Text(message ?? ""),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text("باشه"),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        String phoneNumber = phoneController.text.trim();
+        if (phoneNumber.length == 11 && contact.lastMessage != null && contact.lastMessage!.isNotEmpty) {
+          _sendSMS(contact.lastMessage!, phoneNumber);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("پیامی که از سرور می آید خالی است."),
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text("موفق"),
-              content: const Text("کاربر با موفقیت اضافه شد."),
+              title: const Text("خطا"),
+              content: const Text("مشکلی در اضافه کردن کاربر پیش آمد."),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -121,36 +163,11 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        String phoneNumber = phoneController.text.trim();
-        if (phoneNumber.length == 11 && contact.lastMessage != null && contact.lastMessage!.isNotEmpty) {
-          _sendSMS(contact.lastMessage!, phoneNumber);
-        } else {
-          if(mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("لطفا یک شماره موبایل معتبر وارد کنید."),
-              ),
-            );
-          }
-
-        }
-      } else {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("خطا"),
-            content: const Text("مشکلی در اضافه کردن کاربر پیش آمد."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("باشه"),
-              ),
-            ],
-          ),
-        );
       }
+      // پاک کردن مقادیر فیلدهای متنی
+      nameController.clear();
+      lastNameController.clear();
+      phoneController.clear();
     } else {
       // اگر فیلدها کامل نبودند، پیغام خطا نمایش داده شود
       showDialog(
@@ -170,6 +187,7 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
+
   // Validator functions for each field
   String? _validateRequired(String? value, String fieldName) {
     if (value == null || value.isEmpty) {
@@ -196,17 +214,7 @@ class _HomePageState extends State<HomePage> {
       child: Padding(
         padding: const EdgeInsets.only(top: 8.0),
         child: Scaffold(
-          appBar: AppBar(title: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0,vertical: 20),
-            child: const Text("افزودن مخاطب"),
-          ),actions: [ Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            child: Image.asset(
-              "lib/assets/small_logo.png",
-              height: 100,
-              width: 100,
-            ),
-          ),],),
+
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: FutureBuilder<List<GroupModel>>(
@@ -228,6 +236,23 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20),
+                                child: const Text("افزودن مخاطب",style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20),
+                                child: Image.asset(
+                                  "assets/small_logo.png",
+                                  height: 80,
+                                  width: 80,
+                                ),
+                              ),
+                            ],
+                          ),
                           DropdownButtonFormField<String>(
                             decoration: const InputDecoration(
                               labelText: "انتخاب گروه",
@@ -240,6 +265,7 @@ class _HomePageState extends State<HomePage> {
                               return DropdownMenuItem(
                                 value: group.name,
                                 child: Text(group.name),
+                                alignment: Alignment.centerRight,
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -248,6 +274,39 @@ class _HomePageState extends State<HomePage> {
                               });
                             },
                             validator: (value) => _validateRequired(value, "گروه"),
+                            alignment: Alignment.centerRight,
+                          ),
+                          const SizedBox(height: 16),
+                          Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: DropdownButtonFormField<String>(
+                              decoration: const InputDecoration(
+                                labelText: "جنسیت",
+                                border: OutlineInputBorder(),
+                                filled: true,
+                                fillColor: Colors.white70,
+                              ),
+                              value: selectedGender,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: "مرد",
+                                  child: Text("مرد"),
+                                  alignment: Alignment.centerRight,
+                                ),
+                                DropdownMenuItem(
+                                  value: "زن",
+                                  child: Text("زن"),
+                                  alignment: Alignment.centerRight,
+                                ),
+                              ],
+                              alignment: Alignment.centerRight,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedGender = value;
+                                });
+                              },
+                              validator: (value) => _validateRequired(value, "جنسیت"),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -290,31 +349,23 @@ class _HomePageState extends State<HomePage> {
                             textDirection: TextDirection.rtl,
                             validator: _validatePhoneNumber,
                           ),
-                          const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: "جنسیت",
-                              border: OutlineInputBorder(),
-                              filled: true,
-                              fillColor: Colors.white70,
-                            ),
-                            value: selectedGender,
-                            items: const [
-                              DropdownMenuItem(value: "مرد", child: Text("مرد")),
-                              DropdownMenuItem(value: "زن", child: Text("زن")),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                selectedGender = value;
-                              });
-                            },
-                            validator: (value) => _validateRequired(value, "جنسیت"),
-                          ),
                           const SizedBox(height: 24),
                           ElevatedButton(
                             onPressed: _submitForm,
-                            child: const Text("ثبت و ارسال پیامک",style: TextStyle(fontSize: 16),),
-                            style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Color(0xff30471f)),foregroundColor: WidgetStateProperty.all(Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 32, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color(0xff30471f),
+                            ),
+                            child: const Text(
+                              "ثبت و ارسال پیامک",
+                              style: TextStyle(fontSize: 20),
+                            ),
+
                           ),
                         ],
                       ),
@@ -329,6 +380,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
 // import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 // import 'package:shared_preferences/shared_preferences.dart';

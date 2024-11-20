@@ -29,7 +29,7 @@ class HomeController {
     }
   }
 
-  Future<ContactModel?> addContact({
+  Future<AddContactResponse?> addContact({
     required String firstName,
     required String lastName,
     required String phoneNumber,
@@ -48,9 +48,11 @@ class HomeController {
       });
 
       if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes))['data'];
+        final message = json.decode(utf8.decode(response.bodyBytes))['message'] ?? 'کاربر با موفقیت اضافه شد.';
 
-        final data =  json.decode(utf8.decode(response.bodyBytes))['data'];
-        return ContactModel.fromJson(data); // کاربر با موفقیت اضافه شده است
+        final contact = ContactModel.fromJson(data);
+        return AddContactResponse(contact: contact, message: message); // بازگشت کلاس AddContactResponse
       } else {
         throw Exception('Failed to add contact: ${utf8.decode(response.bodyBytes)}');
       }
@@ -60,4 +62,14 @@ class HomeController {
     }
   }
 
+}
+
+class AddContactResponse {
+  final ContactModel contact;
+  final String message;
+
+  AddContactResponse({
+    required this.contact,
+    required this.message,
+  });
 }
